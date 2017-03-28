@@ -1,6 +1,8 @@
 package ru.innopolis.app;
 
 import android.app.Activity;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -9,8 +11,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 
 import dalvik.system.DexClassLoader;
 import dalvik.system.DexFile;
@@ -18,12 +22,13 @@ import dalvik.system.DexFile;
 public class MainActivity extends Activity {
 
     private static final String TAG = MainActivity.class.getName();
+    private static final String CL_TAG = MainActivity.class.getName() + ":ClassLoader";
     private ArrayList<Class> loaded = new ArrayList<>();
     private Activity substituted;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onCreate(Bundle state) {
+        super.onCreate(state);
         setContentView(R.layout.activity_main);
 
         final TextView out = (TextView) findViewById(R.id.textView);
@@ -38,32 +43,63 @@ public class MainActivity extends Activity {
             }
         });
 
-        String s = "/data/app/ru.innopolis.dummy.apk";
-
-        loadApk(s);
-        for (Class c: loaded) {
-            Log.d(TAG + ":ClassLoading", "loaded: " + c.getCanonicalName());
+        String app = "ru.innopolis.dummy";
+        String path = getApkPath(app);
+        if (path == null) {
+            Log.d(TAG, "Not found path for " + app);
+            return;
+        } else {
+            Log.d(TAG, "Found app path: " + path);
         }
 
+        loadApk(path);
+        loadMain();
+        assert substituted != null;
+        Log.d(CL_TAG, "loaded: " + substituted.getClass().getCanonicalName());
+        invoke("f");
+    }
+
+    Object invoke(String name, Object... c) {
+        if (substituted == null) return null;
+        try {
+            Method method = substituted.getClass().getMethod(name);
+            if (!method.isAccessible()) {
+                method.setAccessible(true);
+            }
+            return method.invoke(substituted, c);
+        } catch (Exception e) {
+            Log.d(CL_TAG, "Can't execute " + name + " because of " + e.toString());
+            return null;
+        }
+    }
+
+    private String getApkPath(String name) {
+        List<ApplicationInfo> apps = getPackageManager()
+                .getInstalledApplications(PackageManager.GET_META_DATA);
+        for (ApplicationInfo pi : apps) {
+            if (pi.packageName.equals(name)) return pi.sourceDir;
+        }
+        return null;
+    }
+
+    private void loadMain() {
         for (Class c: loaded) {
-            if (c.getSuperclass().equals(Activity.class)) {
+            if (Activity.class.isAssignableFrom(c)) {
                 try {
                     substituted = (Activity) c.getConstructor().newInstance();
-                    c.getDeclaredMethod("f").invoke(substituted);
-                } catch (Exception e) {
-                    Log.d(TAG + ":ClassLoading", "method not resolved: " + c.getCanonicalName());
-                }
+                } catch (Exception ignored) {}
             }
         }
     }
 
-    private void loadApk(String apk) {
-        DexClassLoader loader = new DexClassLoader(apk, getCacheDir().getAbsolutePath(), null, getClass().getClassLoader());
-        for (String c: listClasses(apk)) {
+    private void loadApk(String path) {
+        DexClassLoader loader = new DexClassLoader(path,
+                getCacheDir().getAbsolutePath(), null, getClass().getClassLoader());
+        for (String c: listClasses(path)) {
             try {
                 loaded.add(loader.loadClass(c));
             } catch (ClassNotFoundException e) {
-                Log.d(TAG + ":ClassLoading", "not found: " + c);
+                Log.d(CL_TAG, "not found: " + c);
             }
         }
     }
@@ -78,7 +114,7 @@ public class MainActivity extends Activity {
                 if (c.contains("android")) continue;
                 if (c.endsWith(".R")) continue;
                 classes.add(c);
-                Log.d(TAG + ":ClassLoading", c);
+                Log.d(CL_TAG, c);
             }
         } catch (IOException ignored) {}
         return classes;
