@@ -14,7 +14,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         TelephonyManager tm = (TelephonyManager) getBaseContext().getSystemService(Context.TELEPHONY_SERVICE);
-        ((TextView) findViewById(R.id.phone_num)).setText("Your phone number is: " + tm.getLine1Number());
+        ((TextView) findViewById(R.id.phone_num)).setText("Your IMEI is: " + tm.getDeviceId());
         Log.d(getClass().getCanonicalName(), "In onCreate-function");
     }
 

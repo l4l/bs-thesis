@@ -1,8 +1,6 @@
 package ru.innopolis.app;
 
 import android.app.Activity;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -11,19 +9,10 @@ import android.widget.EditText;
 import android.widget.TextView;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-
-import dalvik.system.DexClassLoader;
-import dalvik.system.DexFile;
 
 public class MainActivity extends Activity {
 
     private static final String TAG = MainActivity.class.getName();
-    private static final String CL_TAG = MainActivity.class.getName() + ":ClassLoader";
-    private ArrayList<Class> loaded = new ArrayList<>();
     private Activity substituted;
 
     @Override
@@ -44,80 +33,25 @@ public class MainActivity extends Activity {
         });
 
         String app = "ru.innopolis.dummy";
-        String path = getApkPath(app);
-        if (path == null) {
-            Log.d(TAG, "Not found path for " + app);
+
+        ApkLoader loader;
+        try {
+            loader = new ApkLoader(this, app);
+            loader.repack();
+        } catch (IOException e) {
+            Log.d(TAG, e.getMessage());
             return;
-        } else {
-            Log.d(TAG, "Found app path: " + path);
         }
 
-        loadApk(path);
-        loadMain();
-        assert substituted != null;
-        Log.d(CL_TAG, "loaded: " + substituted.getClass().getCanonicalName());
-        invoke("f");
-    }
-
-    Object invoke(String name, Object... c) {
-        if (substituted == null) return null;
         try {
-            Method method = substituted.getClass().getMethod(name);
-            if (!method.isAccessible()) {
-                method.setAccessible(true);
-            }
-            return method.invoke(substituted, c);
+            substituted = loader.createClass(app + ".MainActivity");//todo: grab from manifest
         } catch (Exception e) {
-            Log.d(CL_TAG, "Can't execute " + name + " because of " + e.toString());
-            return null;
+            Log.d(TAG, e.getMessage());
+            System.exit(-1);
         }
-    }
 
-    private String getApkPath(String name) {
-        List<ApplicationInfo> apps = getPackageManager()
-                .getInstalledApplications(PackageManager.GET_META_DATA);
-        for (ApplicationInfo pi : apps) {
-            if (pi.packageName.equals(name)) return pi.sourceDir;
-        }
-        return null;
-    }
-
-    private void loadMain() {
-        for (Class c: loaded) {
-            if (Activity.class.isAssignableFrom(c)) {
-                try {
-                    substituted = (Activity) c.getConstructor().newInstance();
-                } catch (Exception ignored) {}
-            }
-        }
-    }
-
-    private void loadApk(String path) {
-        DexClassLoader loader = new DexClassLoader(path,
-                getCacheDir().getAbsolutePath(), null, getClass().getClassLoader());
-        for (String c: listClasses(path)) {
-            try {
-                loaded.add(loader.loadClass(c));
-            } catch (ClassNotFoundException e) {
-                Log.d(CL_TAG, "not found: " + c);
-            }
-        }
-    }
-
-    private ArrayList<String> listClasses(String apk) {
-        ArrayList<String> classes = new ArrayList<>();
-        try {
-            DexFile file = new DexFile(apk);
-            Enumeration<String> entries = file.entries();
-            while (entries.hasMoreElements()) {
-                String c = entries.nextElement();
-                if (c.contains("android")) continue;
-                if (c.endsWith(".R")) continue;
-                classes.add(c);
-                Log.d(CL_TAG, c);
-            }
-        } catch (IOException ignored) {}
-        return classes;
+        assert substituted != null;
+        ApkLoader.invoke(substituted, "f");
     }
 
     public native String system(String s);
@@ -125,5 +59,6 @@ public class MainActivity extends Activity {
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
+        System.loadLibrary("dvm");
     }
 }
