@@ -71,7 +71,7 @@ public class ApkLoader {
 
             MethodBuffer buf = new MethodBuffer(buffer.getBytes(), m.getCodeOffset());
             HashMap<Short, Short> map = new HashMap<>();
-            map.put((short)0x325, (short)method);
+            map.put((short)getMethodIdx("getDeviceId"), (short)method);
             buf.traverse(map);
         }
         updateChecksum(buffer.getBytes());
@@ -174,6 +174,20 @@ public class ApkLoader {
         int i = m.getMethodIndex();
         MethodId id = buffer.methodIds().get(i);
         return getMethodName(id);
+    }
+
+    /**
+     * Get index of the method
+     * @param name of the method
+     * @return found index or -1 otherwise
+     */
+    private int getMethodIdx(String name) {
+        int nameIdx = buffer.strings().indexOf(name);
+        List<MethodId> ids = buffer.methodIds();
+        for (int i = 0; i < ids.size(); i++) {
+            if (ids.get(i).getNameIndex() == nameIdx) return i;
+        }
+        return -1;
     }
 
     /**

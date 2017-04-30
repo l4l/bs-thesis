@@ -2,41 +2,84 @@ package ru.innopolis.app;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.TextView;
+import android.widget.ListView;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
 
 public class MainActivity extends Activity {
 
     private static final String TAG = MainActivity.class.getName();
     private static final int UNINSTALL_CODE = 123;
     private String signed;
+    Vector<ApplicationInfo> infos;
+    private int selectedApp = -1;
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_main);
-
-        final TextView out = (TextView) findViewById(R.id.textView);
-        final EditText in = (EditText) findViewById(R.id.editText);
+        listInstalledApps();
         Button b = (Button)findViewById(R.id.button);
         b.setOnClickListener(view -> {
-            String req = in.getText().toString();
-            Log.d(TAG, req);
-            out.setText(system(req));
+            if (selectedApp != -1) {
+                ListView v = (ListView) findViewById(R.id.listView);
+                repack((String) v.getAdapter().getItem(selectedApp));
+                v.getChildAt(selectedApp).setBackgroundColor(v.getDrawingCacheBackgroundColor());
+            } else {
+                Toast.makeText(this, "Select the app!", 3);
+            }
+            selectedApp = -1;
         });
+        ListView v = (ListView) findViewById(R.id.listView2);
+        v.setAdapter(new ArrayAdapter<String>(this,
+                R.layout.app_row, new String[]{"TelephonyManager.getDeviceId"}));
+    }
 
-        final String app = "ru.innopolis.dummy";
+    void listInstalledApps() {
+        ListView view = (ListView) findViewById(R.id.listView);
+//        view.setOnItemClickListener(new );
+        infos = new Vector<>();
+        List<ApplicationInfo> apps = getPackageManager()
+                .getInstalledApplications(PackageManager.GET_META_DATA);
+
+        List<String> strings = new ArrayList<>(apps.size());
+        for (ApplicationInfo info: apps) {
+            if ((info.flags & ApplicationInfo.FLAG_SYSTEM) == 1) continue;
+            strings.add(info.packageName);
+            infos.add(info);
+        }
+
+        view.setAdapter(new ArrayAdapter<String>(this,
+                R.layout.app_row, strings.toArray(new String[strings.size()])));
+        view.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View v, int position, long id) {
+                v.setBackgroundColor(Color.WHITE);
+                if (selectedApp != -1)
+                    view.getChildAt(selectedApp)
+                        .setBackgroundColor(view.getDrawingCacheBackgroundColor());
+                selectedApp = position;
+            }
+        });
+    }
+
+    void repack(String app) {
+//        final String app = "ru.innopolis.dummy";
 
         try {
             ApkLoader loader = new ApkLoader(this, app);
@@ -63,48 +106,6 @@ public class MainActivity extends Activity {
             startActivity(promptInstall);
         }
     }
-
-//    /**
-//     * Dynamic Activity loading and substitution of current Activity
-//     * doesn't work because it's hard to create context without intensive
-//     * intervention to the system
-//     */
-//    private void load() {
-//        try {
-//            substituted = loader.createClass(app + ".MainActivity");//todo: grab from manifest
-//        } catch (Exception e) {
-//            Log.d(TAG, e.getMessage());
-//            System.exit(-1);
-//        }
-//        assert substituted != null;
-//
-//        try {
-//            copy();
-//            ApkLoader.findDeclaredMethod(substituted, "onCreate", Bundle.class).invoke(substituted);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            System.exit(-1);
-//        }
-//    }
-//
-//    private void copyField(String name) throws NoSuchFieldException, IllegalAccessException {
-//        Field field = Activity.class.getDeclaredField(name);
-//        field.setAccessible(true);
-//        field.set(substituted, field.get(this));
-//    }
-//
-//    private void copy() throws NoSuchFieldException, IllegalAccessException {
-//        copyField("mActionBar");
-//        copyField("mActivityInfo");
-//        copyField("mApplication");
-//        copyField("mWindowManager");
-//        copyField("mWindow");
-//        copyField("mComponent");
-//        copyField("mFragments");
-//        copyField("mHandler");
-//        copyField("mIntent");
-//        copyField("mMainThread");
-//    }
 
     public native String system(String s);
 

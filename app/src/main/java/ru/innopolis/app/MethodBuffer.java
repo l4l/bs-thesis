@@ -1,14 +1,11 @@
 package ru.innopolis.app;
 
-import com.android.dx.io.instructions.CodeOutput;
 import com.android.dx.io.instructions.DecodedInstruction;
 import com.android.dx.io.instructions.ShortArrayCodeInput;
 import com.android.dx.io.instructions.ShortArrayCodeOutput;
 import com.android.dx.util.ByteInput;
-import com.android.dx.util.Leb128Utils;
 
 import java.io.EOFException;
-import java.util.Arrays;
 import java.util.Map;
 
 import static com.android.dx.io.Opcodes.*;
@@ -69,12 +66,8 @@ public class MethodBuffer implements ByteInput {
                 if (toPatch.containsKey(b)) {
                     short idx = toPatch.get(b);
                     out.write(new byte[]{
-                            // It's enough to use only static methods
                             INVOKE_STATIC,
-//                                (byte) ins.getOpcodeUnit(),
-                            // Don't get any arguments
                             (byte) ins.getENibble(),
-//                                (byte) (ins.getRegisterCountUnit() << 4 | ins.getENibble()),
                             (byte) idx,
                             (byte) (idx >> 8),
                             (byte) (ins.getBNibble() << 4 | ins.getANibble()),
@@ -84,22 +77,6 @@ public class MethodBuffer implements ByteInput {
             default:
                 ins.encode(out);
         }
-    }
-
-    private static void writeShortLE(CodeOutput out, short a, short b, short c, short d) {
-        out.write((short) (
-                (a & 0xf) << 0xc |
-                (b & 0xf) << 0x8 |
-                (c & 0xf) << 0x4 |
-                (d & 0xf)));
-    }
-
-    private static void writeShortLE(CodeOutput out, short a, short b) {
-        out.write((short) (a << 8 | b));
-    }
-
-    private static void writeShortLE(CodeOutput out, short s) {
-        writeShortLE(out, (byte)s, (byte)(s >> 8));
     }
 
     // Code from com.android.dx.io.DexBuffer
@@ -128,12 +105,6 @@ public class MethodBuffer implements ByteInput {
         return (byte) (data[position++] & 0xff);
     }
 
-    public byte[] readByteArray(int length) {
-        byte[] result = Arrays.copyOfRange(data, position, position + length);
-        position += length;
-        return result;
-    }
-
     public short[] readShortArray(int length) {
         short[] result = new short[length];
         for (int i = 0; i < length; i++) {
@@ -142,72 +113,4 @@ public class MethodBuffer implements ByteInput {
         return result;
     }
 
-    public int readUleb128() {
-        return Leb128Utils.readUnsignedLeb128(this);
-    }
-
-    public int readSleb128() {
-        return Leb128Utils.readSignedLeb128(this);
-    }
-
-    private CatchHandler readCatchHandler() {
-        int size = readSleb128();
-        int handlersCount = Math.abs(size);
-        int[] typeIndexes = new int[handlersCount];
-        int[] addresses = new int[handlersCount];
-        for (int i = 0; i < handlersCount; i++) {
-            typeIndexes[i] = readUleb128();
-            addresses[i] = readUleb128();
-        }
-        int catchAllAddress = size <= 0 ? readUleb128() : -1;
-        return new CatchHandler(typeIndexes, addresses, catchAllAddress);
-    }
-
-    public static class Try {
-        final int startAddress;
-        final int instructionCount;
-        final int handlerOffset;
-
-        Try(int startAddress, int instructionCount, int handlerOffset) {
-            this.startAddress = startAddress;
-            this.instructionCount = instructionCount;
-            this.handlerOffset = handlerOffset;
-        }
-
-        public int getStartAddress() {
-            return startAddress;
-        }
-
-        public int getInstructionCount() {
-            return instructionCount;
-        }
-
-        public int getHandlerOffset() {
-            return handlerOffset;
-        }
-    }
-
-    public static class CatchHandler {
-        final int[] typeIndexes;
-        final int[] addresses;
-        final int catchAllAddress;
-
-        public CatchHandler(int[] typeIndexes, int[] addresses, int catchAllAddress) {
-            this.typeIndexes = typeIndexes;
-            this.addresses = addresses;
-            this.catchAllAddress = catchAllAddress;
-        }
-
-        public int[] getTypeIndexes() {
-            return typeIndexes;
-        }
-
-        public int[] getAddresses() {
-            return addresses;
-        }
-
-        public int getCatchAllAddress() {
-            return catchAllAddress;
-        }
-    }
 }

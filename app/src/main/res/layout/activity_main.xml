@@ -3,33 +3,48 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="ru.innopolis.app.MainActivity"
-    android:orientation="horizontal">
+    android:orientation="vertical"
+    tools:context="ru.innopolis.app.MainActivity">
 
-    <include layout="@layout/content_main"
-        android:id="@+id/include" />
-
-    <Button
-        android:id="@+id/button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:text="Button"/>
-
-
-    <EditText
-        android:id="@+id/editText"
-        android:layout_width="match_parent"
-        android:layout_height="192dp"
-        android:ems="10"
-        android:inputType="textPersonName"
-        android:text="Name" />
 
     <TextView
         android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical|center_horizontal"
-        android:text="TextView"/>
+        android:layout_width="match_parent"
+        android:layout_height="30dp"
+        android:background="@android:color/background_light"
+        android:gravity="center_horizontal"
+        android:text="Select app for patch" />
 
+    <ListView
+        android:id="@+id/listView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.40"
+        android:background="@android:color/darker_gray"
+        android:clickable="false">
+    </ListView>
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:background="@android:color/background_light"
+        android:gravity="center_horizontal"
+        android:text="Select patching method" />
+
+    <ListView
+        android:id="@+id/listView2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.40"
+        android:background="@android:color/darker_gray"
+        android:clickable="false">
+    </ListView>
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.01"
+        android:text="Patch" />
 </LinearLayout>
