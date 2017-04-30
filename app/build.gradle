@@ -15,6 +15,9 @@ android {
                 cppFlags "-std=c++11 -frtti"
             }
         }
+        jackOptions {
+            enabled true
+        }
     }
     buildTypes {
         release {
@@ -33,8 +36,8 @@ android {
     dexOptions {
     }
     compileOptions {
-        targetCompatibility JavaVersion.VERSION_1_7
-        sourceCompatibility JavaVersion.VERSION_1_7
+        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_1_8
     }
 }
 
@@ -49,4 +52,8 @@ dependencies {
     androidTestCompile 'junit:junit:4.12'
     compile 'com.jakewharton.android.repackaged:libcore-dex:7.1.0_r7'
     compile 'com.google.android.tools:dx:1.7'
+    compile files('libs/apksigner.jar')
+    compile files('libs/kellinwood/zipsigner-lib-1.17.jar')
+    compile files('libs/kellinwood/zipio-lib-1.8.jar')
+    compile files('libs/kellinwood/kellinwood-logging-lib-1.1.jar')
 }

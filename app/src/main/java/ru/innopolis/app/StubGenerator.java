@@ -2,6 +2,7 @@ package ru.innopolis.app;
 
 import com.android.dx.gen.Code;
 import com.android.dx.gen.DexGenerator;
+import com.android.dx.gen.Local;
 import com.android.dx.gen.MethodId;
 import com.android.dx.gen.Type;
 import com.android.dx.io.DexBuffer;
@@ -25,9 +26,16 @@ public class StubGenerator {
         return new DexBuffer(generator.generate());
     }
 
-    public void generateMethod(String name) {
-        MethodId<?, Void> methodId = stub.getMethod(Type.VOID, name);
+    public <T> void generateMethod(String name, Type<T> ret, Type...params) {
+        MethodId methodId = stub.getMethod(ret, name, params);
         Code code = generator.declare(methodId, Modifier.STATIC | Modifier.PUBLIC);
-        code.returnVoid();
+        if (ret.equals(Type.VOID)) {
+            code.returnVoid();
+        } else {
+            MethodId<T, Void> ctr = ret.getConstructor();
+            Local<T> r = code.newLocal(ret);
+            code.newInstance(r, ctr);
+            code.returnValue(r);
+        }
     }
 }
